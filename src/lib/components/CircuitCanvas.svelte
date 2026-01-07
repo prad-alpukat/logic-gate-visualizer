@@ -76,20 +76,18 @@
 	}
 
 	function handleWheel(e: WheelEvent) {
-		if (e.ctrlKey || e.metaKey) {
-			e.preventDefault();
-			if (e.deltaY < 0) {
-				zoomIn();
-			} else {
-				zoomOut();
-			}
+		e.preventDefault();
+		if (e.deltaY < 0) {
+			zoomIn();
+		} else {
+			zoomOut();
 		}
 	}
 
 	// Pan handlers
 	function handlePanStart(e: MouseEvent) {
-		// Only pan with middle mouse button or when holding space
-		if (e.button === 1 || e.shiftKey) {
+		// Left click to drag
+		if (e.button === 0) {
 			e.preventDefault();
 			isPanning = true;
 			startMouseX = e.clientX;
@@ -161,7 +159,7 @@
 	}
 
 	let zoomPercent = $derived(Math.round(zoom * 100));
-	let cursorStyle = $derived(isPanning ? 'grabbing' : 'crosshair');
+	let cursorStyle = $derived(isPanning ? 'grabbing' : 'grab');
 	let hasPanned = $derived(panX !== 0 || panY !== 0);
 </script>
 
@@ -205,7 +203,7 @@
 					<line x1="12" y1="2" x2="12" y2="22"/>
 				</svg>
 			</button>
-			<span class="pan-hint">Shift + Drag untuk geser</span>
+			<span class="pan-hint">Drag untuk geser</span>
 		</div>
 	</div>
 
@@ -244,7 +242,7 @@
 	</div>
 
 	<div class="controls-hint">
-		Ctrl + Scroll = Zoom | Shift + Drag = Pan
+		Scroll = Zoom | Drag = Pan
 	</div>
 </div>
 
