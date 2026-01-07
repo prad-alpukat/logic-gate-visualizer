@@ -4,28 +4,61 @@
 
 	interface Props {
 		parsedExpression: ParsedExpression | null;
+		onformulachange?: (formula: string) => void;
 	}
 
-	let { parsedExpression }: Props = $props();
+	let { parsedExpression, onformulachange }: Props = $props();
 
-	let truthTable = $derived(parsedExpression ? generateTruthTable(parsedExpression) : []);
+	// Default 3 variables for interactive mode
+	const defaultVariables = ['A', 'B', 'C'];
+
+	// Editable truth table state
+	let editableOutputs = $state<boolean[]>(new Array(8).fill(false));
+
+	// Generate editable table rows
+	let editableTable = $derived.by(() => {
+		const rows: TruthTableRow[] = [];
+		const numRows = Math.pow(2, defaultVariables.length);
+
+		for (let i = 0; i < numRows; i++) {
+			const values: Record<string, boolean> = {};
+			defaultVariables.forEach((v, idx) => {
+				values[v] = Boolean((i >> (defaultVariables.length - 1 - idx)) & 1);
+			});
+			rows.push({ values, output: editableOutputs[i] });
+		}
+		return rows;
+	});
+
+	// Use parsed expression table if available, otherwise use editable
+	let displayTable = $derived(parsedExpression ? generateTruthTable(parsedExpression) : editableTable);
+	let displayVariables = $derived(parsedExpression ? parsedExpression.variables : defaultVariables);
+
+	// Toggle output for editable mode
+	function toggleOutput(index: number) {
+		if (!parsedExpression) {
+			editableOutputs[index] = !editableOutputs[index];
+			// Notify parent of formula change
+			if (onformulachange) {
+				onformulachange(sopFormula);
+			}
+		}
+	}
 
 	// Generate SOP (Sum of Products) from minterms (where output = 1)
 	function generateSOP(table: TruthTableRow[], variables: string[]): string {
 		const minterms = table
 			.map((row, index) => ({ row, index }))
 			.filter(({ row }) => row.output)
-			.map(({ row, index }) => {
-				const term = variables
-					.map((v) => (row.values[v] ? v : v + "'"))
-					.join('');
-				return { term, index };
+			.map(({ row }) => {
+				const term = variables.map((v) => (row.values[v] ? v : v + "'")).join('');
+				return term;
 			});
 
 		if (minterms.length === 0) return '0';
 		if (minterms.length === table.length) return '1';
 
-		return minterms.map((m) => m.term).join(' + ');
+		return minterms.join(' + ');
 	}
 
 	// Generate POS (Product of Sums) from maxterms (where output = 0)
@@ -33,17 +66,15 @@
 		const maxterms = table
 			.map((row, index) => ({ row, index }))
 			.filter(({ row }) => !row.output)
-			.map(({ row, index }) => {
-				const term = variables
-					.map((v) => (row.values[v] ? v + "'" : v))
-					.join(' + ');
-				return { term: `(${term})`, index };
+			.map(({ row }) => {
+				const term = variables.map((v) => (row.values[v] ? v + "'" : v)).join(' + ');
+				return `(${term})`;
 			});
 
 		if (maxterms.length === 0) return '1';
 		if (maxterms.length === table.length) return '0';
 
-		return maxterms.map((m) => m.term).join(' · ');
+		return maxterms.join(' · ');
 	}
 
 	// Generate minterm notation (e.g., Σm(0,3,5))
@@ -68,69 +99,91 @@
 		return `ΠM(${indices.join(', ')})`;
 	}
 
+	// Clear all outputs
+	function clearAll() {
+		editableOutputs = new Array(8).fill(false);
+	}
+
+	// Set all outputs
+	function setAll() {
+		editableOutputs = new Array(8).fill(true);
+	}
+
 	let sopFormula = $derived(
-		parsedExpression && truthTable.length > 0
-			? generateSOP(truthTable, parsedExpression.variables)
-			: ''
+		displayTable.length > 0 ? generateSOP(displayTable, displayVariables) : ''
 	);
 
 	let posFormula = $derived(
-		parsedExpression && truthTable.length > 0
-			? generatePOS(truthTable, parsedExpression.variables)
-			: ''
+		displayTable.length > 0 ? generatePOS(displayTable, displayVariables) : ''
 	);
 
-	let mintermNotation = $derived(truthTable.length > 0 ? getMintermNotation(truthTable) : '');
-	let maxtermNotation = $derived(truthTable.length > 0 ? getMaxtermNotation(truthTable) : '');
+	let mintermNotation = $derived(displayTable.length > 0 ? getMintermNotation(displayTable) : '');
+	let maxtermNotation = $derived(displayTable.length > 0 ? getMaxtermNotation(displayTable) : '');
+
+	let isEditable = $derived(!parsedExpression);
 </script>
 
 <div class="info-card">
 	<h3>Tabel Kebenaran</h3>
-	<div class="truth-table-container">
-		{#if parsedExpression && truthTable.length > 0}
-			<table class="truth-table">
-				<thead>
-					<tr>
-						<th class="row-num">#</th>
-						{#each parsedExpression.variables as variable}
-							<th>{variable}</th>
-						{/each}
-						<th>Y</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each truthTable as row, index}
-						<tr>
-							<td class="row-num">{index}</td>
-							{#each parsedExpression.variables as variable}
-								<td>{row.values[variable] ? '1' : '0'}</td>
-							{/each}
-							<td class={row.output ? 'output-1' : 'output-0'}>
-								{row.output ? '1' : '0'}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
 
-			<div class="formulas">
-				<h4>Rumus dari Tabel Kebenaran</h4>
-
-				<div class="formula-section">
-					<div class="formula-label sop-label">SOP (Sum of Products)</div>
-					<div class="formula-notation">{mintermNotation}</div>
-					<div class="formula-expression">{sopFormula}</div>
-				</div>
-
-				<div class="formula-section">
-					<div class="formula-label pos-label">POS (Product of Sums)</div>
-					<div class="formula-notation">{maxtermNotation}</div>
-					<div class="formula-expression">{posFormula}</div>
-				</div>
+	{#if isEditable}
+		<div class="edit-controls">
+			<span class="edit-hint">Klik pada kolom Y untuk toggle nilai</span>
+			<div class="edit-buttons">
+				<button class="edit-btn" onclick={clearAll}>Reset 0</button>
+				<button class="edit-btn" onclick={setAll}>Set 1</button>
 			</div>
-		{:else}
-			<p class="placeholder">Tabel kebenaran akan muncul di sini.</p>
-		{/if}
+		</div>
+	{/if}
+
+	<div class="truth-table-container">
+		<table class="truth-table">
+			<thead>
+				<tr>
+					<th class="row-num">#</th>
+					{#each displayVariables as variable}
+						<th>{variable}</th>
+					{/each}
+					<th class:clickable={isEditable}>Y</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each displayTable as row, index}
+					<tr>
+						<td class="row-num">{index}</td>
+						{#each displayVariables as variable}
+							<td>{row.values[variable] ? '1' : '0'}</td>
+						{/each}
+						<td
+							class={row.output ? 'output-1' : 'output-0'}
+							class:clickable={isEditable}
+							onclick={() => toggleOutput(index)}
+							onkeydown={(e) => e.key === 'Enter' && toggleOutput(index)}
+							role={isEditable ? 'button' : undefined}
+							tabindex={isEditable ? 0 : undefined}
+						>
+							{row.output ? '1' : '0'}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+
+		<div class="formulas">
+			<h4>Rumus dari Tabel Kebenaran</h4>
+
+			<div class="formula-section">
+				<div class="formula-label sop-label">SOP (Sum of Products)</div>
+				<div class="formula-notation">{mintermNotation}</div>
+				<div class="formula-expression">{sopFormula}</div>
+			</div>
+
+			<div class="formula-section">
+				<div class="formula-label pos-label">POS (Product of Sums)</div>
+				<div class="formula-notation">{maxtermNotation}</div>
+				<div class="formula-expression">{posFormula}</div>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -158,8 +211,41 @@
 		border-radius: 2px;
 	}
 
-	.placeholder {
-		color: #888;
+	.edit-controls {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 15px;
+		padding: 10px 15px;
+		background: rgba(0, 217, 255, 0.1);
+		border: 1px solid rgba(0, 217, 255, 0.3);
+		border-radius: 8px;
+	}
+
+	.edit-hint {
+		color: #00d9ff;
+		font-size: 0.85rem;
+	}
+
+	.edit-buttons {
+		display: flex;
+		gap: 8px;
+	}
+
+	.edit-btn {
+		background: #1a1a2e;
+		color: #00d9ff;
+		border: 1px solid #00d9ff;
+		padding: 5px 12px;
+		border-radius: 5px;
+		cursor: pointer;
+		font-size: 0.8rem;
+		transition: all 0.2s;
+	}
+
+	.edit-btn:hover {
+		background: #00d9ff;
+		color: #1a1a2e;
 	}
 
 	.truth-table {
@@ -180,6 +266,11 @@
 		color: #00d9ff;
 	}
 
+	.truth-table th.clickable {
+		background: linear-gradient(135deg, #1a1a2e, #2a2a4e);
+		cursor: pointer;
+	}
+
 	.truth-table tr:nth-child(even) {
 		background: rgba(0, 0, 0, 0.2);
 	}
@@ -191,6 +282,27 @@
 
 	.truth-table .output-0 {
 		color: #ff6b6b;
+	}
+
+	.truth-table td.clickable {
+		cursor: pointer;
+		transition: all 0.15s;
+		user-select: none;
+	}
+
+	.truth-table td.clickable:hover {
+		background: rgba(0, 217, 255, 0.2);
+		transform: scale(1.1);
+	}
+
+	.truth-table td.clickable.output-1:hover {
+		background: rgba(0, 255, 136, 0.3);
+		box-shadow: inset 0 0 10px rgba(0, 255, 136, 0.3);
+	}
+
+	.truth-table td.clickable.output-0:hover {
+		background: rgba(255, 107, 107, 0.3);
+		box-shadow: inset 0 0 10px rgba(255, 107, 107, 0.3);
 	}
 
 	.truth-table .row-num {

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Header from '$lib/components/Header.svelte';
 	import ExpressionInput from '$lib/components/ExpressionInput.svelte';
 	import CircuitCanvas from '$lib/components/CircuitCanvas.svelte';
@@ -7,12 +6,6 @@
 	import TruthTable from '$lib/components/TruthTable.svelte';
 	import Legend from '$lib/components/Legend.svelte';
 	import { expressionStore } from '$lib/stores/expression.svelte';
-
-	onMount(() => {
-		// Set initial example
-		expressionStore.setExpression("A'B + AB'");
-		expressionStore.visualize();
-	});
 </script>
 
 <svelte:head>
