@@ -14,8 +14,9 @@ export function drawWire(
 	const path: WirePath = { points: [...points], color, label, lineWidth, id: wireId };
 	wirePaths.push(path);
 
-	const isHovered = hoveredWire && hoveredWire.id === wireId;
-	const isDimmed = hoveredWire && hoveredWire.id !== wireId;
+	// Highlight all wires with the same label (variable), not just the same wireId
+	const isHovered = hoveredWire && hoveredWire.label === label;
+	const isDimmed = hoveredWire && hoveredWire.label !== label;
 
 	ctx.beginPath();
 	ctx.strokeStyle = isHovered ? '#ffffff' : isDimmed ? COLORS.dimmed : color;
@@ -43,13 +44,27 @@ export function drawDot(
 	y: number,
 	color: string,
 	radius: number,
-	hoveredWire: WirePath | null
+	hoveredWire: WirePath | null,
+	label?: string
 ): void {
-	const isDimmed = hoveredWire !== null;
+	// Highlight dots with the same label as hovered wire
+	const isHovered = hoveredWire && label && hoveredWire.label === label;
+	const isDimmed = hoveredWire && (!label || hoveredWire.label !== label);
+
 	ctx.beginPath();
-	ctx.fillStyle = isDimmed ? COLORS.dimmed : color;
-	ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+	if (isHovered) {
+		ctx.fillStyle = '#ffffff';
+		ctx.shadowColor = color;
+		ctx.shadowBlur = 10;
+		ctx.arc(x, y, radius + 1, 0, Math.PI * 2);
+	} else {
+		ctx.fillStyle = isDimmed ? COLORS.dimmed : color;
+		ctx.arc(x, y, radius, 0, Math.PI * 2);
+	}
+
 	ctx.fill();
+	ctx.shadowBlur = 0;
 }
 
 function distanceToSegment(

@@ -136,7 +136,7 @@ export function drawCircuit(
 		);
 
 		// Draw dot at junction
-		drawDot(ctx, busX, inputOutputs[v].y, color, 4, hoveredWire);
+		drawDot(ctx, busX, inputOutputs[v].y, color, 4, hoveredWire, v);
 
 		// Negated bus line
 		const busXNeg = busLines[v + "'"];
@@ -161,7 +161,7 @@ export function drawCircuit(
 			wirePaths
 		);
 
-		drawDot(ctx, busXNeg, notOutputs[v].y, color, 4, hoveredWire);
+		drawDot(ctx, busXNeg, notOutputs[v].y, color, 4, hoveredWire, v + "'");
 	});
 
 	// Term gate outputs
@@ -212,7 +212,7 @@ export function drawCircuit(
 			);
 
 			// Draw junction dot on bus
-			drawDot(ctx, busX, targetPos.y, color, 4, hoveredWire);
+			drawDot(ctx, busX, targetPos.y, color, 4, hoveredWire, varKey);
 		});
 	});
 
