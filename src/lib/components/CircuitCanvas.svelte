@@ -24,6 +24,15 @@
 	const MAX_ZOOM = 2;
 	const ZOOM_STEP = 0.1;
 
+	// Pan/Drag state
+	let isPanning = $state(false);
+	let panX = $state(0);
+	let panY = $state(0);
+	let startPanX = $state(0);
+	let startPanY = $state(0);
+	let startMouseX = $state(0);
+	let startMouseY = $state(0);
+
 	let tooltipVisible = $state(false);
 	let tooltipX = $state(0);
 	let tooltipY = $state(0);
@@ -57,6 +66,13 @@
 
 	function resetZoom() {
 		zoom = 1;
+		panX = 0;
+		panY = 0;
+	}
+
+	function resetPan() {
+		panX = 0;
+		panY = 0;
 	}
 
 	function handleWheel(e: WheelEvent) {
@@ -70,6 +86,32 @@
 		}
 	}
 
+	// Pan handlers
+	function handlePanStart(e: MouseEvent) {
+		// Only pan with middle mouse button or when holding space
+		if (e.button === 1 || e.shiftKey) {
+			e.preventDefault();
+			isPanning = true;
+			startMouseX = e.clientX;
+			startMouseY = e.clientY;
+			startPanX = panX;
+			startPanY = panY;
+		}
+	}
+
+	function handlePanMove(e: MouseEvent) {
+		if (isPanning) {
+			const deltaX = e.clientX - startMouseX;
+			const deltaY = e.clientY - startMouseY;
+			panX = startPanX + deltaX;
+			panY = startPanY + deltaY;
+		}
+	}
+
+	function handlePanEnd() {
+		isPanning = false;
+	}
+
 	function getMousePos(e: MouseEvent): { x: number; y: number } {
 		const rect = canvas.getBoundingClientRect();
 		return {
@@ -79,6 +121,12 @@
 	}
 
 	function handleMouseMove(e: MouseEvent) {
+		// Handle panning
+		if (isPanning) {
+			handlePanMove(e);
+			return;
+		}
+
 		if (!parsedExpression) return;
 
 		const pos = getMousePos(e);
@@ -105,69 +153,98 @@
 			onhoverwire(null);
 			tooltipVisible = false;
 		}
+		isPanning = false;
+	}
+
+	function handleMouseUp() {
+		isPanning = false;
 	}
 
 	let zoomPercent = $derived(Math.round(zoom * 100));
+	let cursorStyle = $derived(isPanning ? 'grabbing' : 'crosshair');
+	let hasPanned = $derived(panX !== 0 || panY !== 0);
 </script>
 
+<svelte:window onmouseup={handleMouseUp} />
+
 <div class="canvas-container">
-	<div class="zoom-controls">
-		<button class="zoom-btn" onclick={zoomOut} disabled={zoom <= MIN_ZOOM} title="Zoom Out">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<circle cx="11" cy="11" r="8"/>
-				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
-				<line x1="8" y1="11" x2="14" y2="11"/>
-			</svg>
-		</button>
-		<span class="zoom-level">{zoomPercent}%</span>
-		<button class="zoom-btn" onclick={zoomIn} disabled={zoom >= MAX_ZOOM} title="Zoom In">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<circle cx="11" cy="11" r="8"/>
-				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
-				<line x1="11" y1="8" x2="11" y2="14"/>
-				<line x1="8" y1="11" x2="14" y2="11"/>
-			</svg>
-		</button>
-		<button class="zoom-btn reset" onclick={resetZoom} disabled={zoom === 1} title="Reset Zoom">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-				<path d="M3 3v5h5"/>
-			</svg>
-		</button>
+	<div class="controls-bar">
+		<div class="zoom-controls">
+			<button class="ctrl-btn" onclick={zoomOut} disabled={zoom <= MIN_ZOOM} title="Zoom Out (-)">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<circle cx="11" cy="11" r="8"/>
+					<line x1="21" y1="21" x2="16.65" y2="16.65"/>
+					<line x1="8" y1="11" x2="14" y2="11"/>
+				</svg>
+			</button>
+			<span class="zoom-level">{zoomPercent}%</span>
+			<button class="ctrl-btn" onclick={zoomIn} disabled={zoom >= MAX_ZOOM} title="Zoom In (+)">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<circle cx="11" cy="11" r="8"/>
+					<line x1="21" y1="21" x2="16.65" y2="16.65"/>
+					<line x1="11" y1="8" x2="11" y2="14"/>
+					<line x1="8" y1="11" x2="14" y2="11"/>
+				</svg>
+			</button>
+			<button class="ctrl-btn reset" onclick={resetZoom} disabled={zoom === 1 && !hasPanned} title="Reset View">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+					<path d="M3 3v5h5"/>
+				</svg>
+			</button>
+		</div>
+
+		<div class="pan-controls">
+			<button class="ctrl-btn pan" onclick={resetPan} disabled={!hasPanned} title="Reset Position">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M5 9l-3 3 3 3"/>
+					<path d="M9 5l3-3 3 3"/>
+					<path d="M15 19l3 3 3-3"/>
+					<path d="M19 9l3 3-3 3"/>
+					<line x1="2" y1="12" x2="22" y2="12"/>
+					<line x1="12" y1="2" x2="12" y2="22"/>
+				</svg>
+			</button>
+			<span class="pan-hint">Shift + Drag untuk geser</span>
+		</div>
 	</div>
 
 	<div
 		class="breadboard"
+		class:panning={isPanning}
 		bind:this={breadboard}
-		style="min-height: {canvasHeight * zoom}px"
+		style="min-height: {Math.max(canvasHeight * zoom, 450)}px"
 		onwheel={handleWheel}
+		onmousedown={handlePanStart}
+		oncontextmenu={(e) => e.preventDefault()}
 	>
 		<div
 			class="canvas-wrapper"
 			bind:this={canvasWrapper}
-			style="transform: scale({zoom}); transform-origin: top center;"
+			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: top center;"
 		>
 			<canvas
 				bind:this={canvas}
 				id="circuit-canvas"
 				width="1200"
 				height={canvasHeight}
+				style="cursor: {cursorStyle}"
 				onmousemove={handleMouseMove}
 				onmouseleave={handleMouseLeave}
 			></canvas>
 		</div>
-		{#if tooltipVisible}
+		{#if tooltipVisible && !isPanning}
 			<div
 				class="tooltip"
-				style="left: {tooltipX * zoom}px; top: {tooltipY * zoom}px; border-color: {tooltipColor}; display: block;"
+				style="left: {tooltipX * zoom + panX}px; top: {tooltipY * zoom + panY}px; border-color: {tooltipColor}; display: block;"
 			>
 				{tooltipText}
 			</div>
 		{/if}
 	</div>
 
-	<div class="zoom-hint">
-		Ctrl + Scroll untuk zoom
+	<div class="controls-hint">
+		Ctrl + Scroll = Zoom | Shift + Drag = Pan
 	</div>
 </div>
 
@@ -194,16 +271,25 @@
 		pointer-events: none;
 	}
 
-	.zoom-controls {
+	.controls-bar {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		gap: 8px;
 		margin-bottom: 15px;
 		position: relative;
 		z-index: 20;
+		flex-wrap: wrap;
+		gap: 10px;
 	}
 
-	.zoom-btn {
+	.zoom-controls,
+	.pan-controls {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.ctrl-btn {
 		background: #1a1a2e;
 		border: 1px solid #00d9ff;
 		color: #00d9ff;
@@ -217,24 +303,34 @@
 		transition: all 0.2s;
 	}
 
-	.zoom-btn:hover:not(:disabled) {
+	.ctrl-btn:hover:not(:disabled) {
 		background: #00d9ff;
 		color: #1a1a2e;
 	}
 
-	.zoom-btn:disabled {
+	.ctrl-btn:disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
 	}
 
-	.zoom-btn.reset {
+	.ctrl-btn.reset {
 		margin-left: 5px;
 		border-color: #ffaa00;
 		color: #ffaa00;
 	}
 
-	.zoom-btn.reset:hover:not(:disabled) {
+	.ctrl-btn.reset:hover:not(:disabled) {
 		background: #ffaa00;
+		color: #1a1a2e;
+	}
+
+	.ctrl-btn.pan {
+		border-color: #00ff88;
+		color: #00ff88;
+	}
+
+	.ctrl-btn.pan:hover:not(:disabled) {
+		background: #00ff88;
 		color: #1a1a2e;
 	}
 
@@ -246,7 +342,12 @@
 		text-align: center;
 	}
 
-	.zoom-hint {
+	.pan-hint {
+		font-size: 0.75rem;
+		color: #666;
+	}
+
+	.controls-hint {
 		position: absolute;
 		bottom: 10px;
 		right: 15px;
@@ -261,20 +362,28 @@
 		border-radius: 10px;
 		min-height: 500px;
 		position: relative;
-		overflow: auto;
+		overflow: hidden;
+	}
+
+	.breadboard.panning {
+		cursor: grabbing;
 	}
 
 	.canvas-wrapper {
-		transition: transform 0.15s ease-out;
+		transition: transform 0.1s ease-out;
 		display: flex;
 		justify-content: center;
+		will-change: transform;
+	}
+
+	.breadboard.panning .canvas-wrapper {
+		transition: none;
 	}
 
 	canvas {
 		position: relative;
 		z-index: 10;
 		display: block;
-		cursor: crosshair;
 	}
 
 	.tooltip {
@@ -288,5 +397,16 @@
 		pointer-events: none;
 		z-index: 100;
 		border: 1px solid #00d9ff;
+	}
+
+	@media (max-width: 600px) {
+		.controls-bar {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.pan-hint {
+			display: none;
+		}
 	}
 </style>
