@@ -119,39 +119,39 @@ export function drawCircuit(
 		const busMinY = Math.min(yRange.min, inputY) - 10;
 		const busMaxY = Math.max(yRange.max, inputY) + 10;
 
-		// Draw as two separate paths for proper rounded corners
-		// Path 1: From input to junction, then up to top (L-shape)
+		// Draw bus line as single vertical line (full range)
 		drawWire(
 			ctx,
 			[
-				{ x: inputOutputs[v].x, y: inputY },
-				{ x: busX, y: inputY },
-				{ x: busX, y: busMinY }
-			],
-			color,
-			v,
-			2,
-			`bus-${v}-top`,
-			hoveredWire,
-			wirePaths
-		);
-
-		// Path 2: From junction down to bottom
-		drawWire(
-			ctx,
-			[
-				{ x: busX, y: inputY },
+				{ x: busX, y: busMinY },
 				{ x: busX, y: busMaxY }
 			],
 			color,
 			v,
 			2,
-			`bus-${v}-bottom`,
+			`bus-${v}`,
 			hoveredWire,
 			wirePaths
 		);
 
-		// Draw dot at junction
+		// Draw horizontal connection from input to bus with rounded corner
+		drawWire(
+			ctx,
+			[
+				{ x: inputOutputs[v].x, y: inputY },
+				{ x: busX, y: inputY }
+			],
+			color,
+			v,
+			2,
+			`input-${v}-bus`,
+			hoveredWire,
+			wirePaths
+		);
+
+		// Draw dots at bus endpoints and junction
+		drawDot(ctx, busX, busMinY, color, 3, hoveredWire, v);
+		drawDot(ctx, busX, busMaxY, color, 3, hoveredWire, v);
 		drawDot(ctx, busX, inputY, color, 4, hoveredWire, v);
 
 		// Negated bus line
@@ -161,37 +161,39 @@ export function drawCircuit(
 		const busMinYNeg = Math.min(yRangeNeg.min, notY) - 10;
 		const busMaxYNeg = Math.max(yRangeNeg.max, notY) + 10;
 
-		// Path 1: From NOT output to junction, then up to top (L-shape)
+		// Draw negated bus line as single vertical line
 		drawWire(
 			ctx,
 			[
-				{ x: notOutputs[v].x, y: notY },
-				{ x: busXNeg, y: notY },
-				{ x: busXNeg, y: busMinYNeg }
-			],
-			color,
-			v + "'",
-			2,
-			`bus-${v}'-top`,
-			hoveredWire,
-			wirePaths
-		);
-
-		// Path 2: From junction down to bottom
-		drawWire(
-			ctx,
-			[
-				{ x: busXNeg, y: notY },
+				{ x: busXNeg, y: busMinYNeg },
 				{ x: busXNeg, y: busMaxYNeg }
 			],
 			color,
 			v + "'",
 			2,
-			`bus-${v}'-bottom`,
+			`bus-${v}'`,
 			hoveredWire,
 			wirePaths
 		);
 
+		// Draw horizontal connection from NOT output to bus
+		drawWire(
+			ctx,
+			[
+				{ x: notOutputs[v].x, y: notY },
+				{ x: busXNeg, y: notY }
+			],
+			color,
+			v + "'",
+			2,
+			`not-${v}-bus`,
+			hoveredWire,
+			wirePaths
+		);
+
+		// Draw dots at bus endpoints and junction
+		drawDot(ctx, busXNeg, busMinYNeg, color, 3, hoveredWire, v + "'");
+		drawDot(ctx, busXNeg, busMaxYNeg, color, 3, hoveredWire, v + "'");
 		drawDot(ctx, busXNeg, notY, color, 4, hoveredWire, v + "'");
 	});
 
