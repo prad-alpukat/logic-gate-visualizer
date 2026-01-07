@@ -29,7 +29,7 @@ export function drawWire(
 		ctx.shadowBlur = 10;
 	}
 
-	const radius = 8; // Corner radius
+	const radius = 10; // Corner radius
 
 	if (points.length < 2) {
 		ctx.stroke();
@@ -40,19 +40,19 @@ export function drawWire(
 
 	if (points.length === 2) {
 		ctx.lineTo(points[1].x, points[1].y);
+	} else if (points.length === 3) {
+		// Single corner - use arcTo
+		ctx.arcTo(points[1].x, points[1].y, points[2].x, points[2].y, radius);
+		ctx.lineTo(points[2].x, points[2].y);
 	} else {
-		// Draw with rounded corners using arcTo
-		for (let i = 1; i < points.length; i++) {
-			const p = points[i];
-			if (i < points.length - 1) {
-				// Use arcTo for corners (it automatically handles the line to the arc)
-				const next = points[i + 1];
-				ctx.arcTo(p.x, p.y, next.x, next.y, radius);
-			} else {
-				// Last point - draw line to end
-				ctx.lineTo(p.x, p.y);
-			}
+		// Multiple corners
+		for (let i = 1; i < points.length - 1; i++) {
+			const corner = points[i];
+			const next = points[i + 1];
+			ctx.arcTo(corner.x, corner.y, next.x, next.y, radius);
 		}
+		// Final line to last point
+		ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
 	}
 
 	ctx.stroke();
