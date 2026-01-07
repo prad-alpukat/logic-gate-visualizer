@@ -111,57 +111,88 @@ export function drawCircuit(
 	// Draw vertical bus lines from inputs (only as long as needed)
 	variables.forEach((v) => {
 		const color = getVarColor(v);
+		const inputY = inputOutputs[v].y;
 
 		// Non-negated bus line
 		const busX = busLines[v];
-		const wireIdNormal = `bus-${v}`;
 		const yRange = busYRange[v];
-		const busMinY = Math.min(yRange.min, inputOutputs[v].y) - 10;
-		const busMaxY = Math.max(yRange.max, inputOutputs[v].y) + 10;
+		const busMinY = Math.min(yRange.min, inputY) - 10;
+		const busMaxY = Math.max(yRange.max, inputY) + 10;
 
+		// Draw as two separate paths for proper rounded corners
+		// Path 1: From input to junction, then up to top (L-shape)
 		drawWire(
 			ctx,
 			[
-				{ x: inputOutputs[v].x, y: inputOutputs[v].y },
-				{ x: busX, y: inputOutputs[v].y },
-				{ x: busX, y: busMinY },
+				{ x: inputOutputs[v].x, y: inputY },
+				{ x: busX, y: inputY },
+				{ x: busX, y: busMinY }
+			],
+			color,
+			v,
+			2,
+			`bus-${v}-top`,
+			hoveredWire,
+			wirePaths
+		);
+
+		// Path 2: From junction down to bottom
+		drawWire(
+			ctx,
+			[
+				{ x: busX, y: inputY },
 				{ x: busX, y: busMaxY }
 			],
 			color,
 			v,
 			2,
-			wireIdNormal,
+			`bus-${v}-bottom`,
 			hoveredWire,
 			wirePaths
 		);
 
 		// Draw dot at junction
-		drawDot(ctx, busX, inputOutputs[v].y, color, 4, hoveredWire, v);
+		drawDot(ctx, busX, inputY, color, 4, hoveredWire, v);
 
 		// Negated bus line
 		const busXNeg = busLines[v + "'"];
-		const wireIdNeg = `bus-${v}'`;
+		const notY = notOutputs[v].y;
 		const yRangeNeg = busYRange[v + "'"];
-		const busMinYNeg = Math.min(yRangeNeg.min, notOutputs[v].y) - 10;
-		const busMaxYNeg = Math.max(yRangeNeg.max, notOutputs[v].y) + 10;
+		const busMinYNeg = Math.min(yRangeNeg.min, notY) - 10;
+		const busMaxYNeg = Math.max(yRangeNeg.max, notY) + 10;
 
+		// Path 1: From NOT output to junction, then up to top (L-shape)
 		drawWire(
 			ctx,
 			[
-				{ x: notOutputs[v].x, y: notOutputs[v].y },
-				{ x: busXNeg, y: notOutputs[v].y },
-				{ x: busXNeg, y: busMinYNeg },
+				{ x: notOutputs[v].x, y: notY },
+				{ x: busXNeg, y: notY },
+				{ x: busXNeg, y: busMinYNeg }
+			],
+			color,
+			v + "'",
+			2,
+			`bus-${v}'-top`,
+			hoveredWire,
+			wirePaths
+		);
+
+		// Path 2: From junction down to bottom
+		drawWire(
+			ctx,
+			[
+				{ x: busXNeg, y: notY },
 				{ x: busXNeg, y: busMaxYNeg }
 			],
 			color,
 			v + "'",
 			2,
-			wireIdNeg,
+			`bus-${v}'-bottom`,
 			hoveredWire,
 			wirePaths
 		);
 
-		drawDot(ctx, busXNeg, notOutputs[v].y, color, 4, hoveredWire, v + "'");
+		drawDot(ctx, busXNeg, notY, color, 4, hoveredWire, v + "'");
 	});
 
 	// Term gate outputs
