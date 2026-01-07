@@ -29,7 +29,7 @@ export function drawWire(
 		ctx.shadowBlur = 10;
 	}
 
-	const cornerRadius = 6; // Small rounded corners
+	const cornerRadius = 8; // Rounded corners
 
 	ctx.moveTo(points[0].x, points[0].y);
 
