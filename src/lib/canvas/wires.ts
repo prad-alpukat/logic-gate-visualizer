@@ -29,10 +29,22 @@ export function drawWire(
 		ctx.shadowBlur = 10;
 	}
 
+	const cornerRadius = 6; // Small rounded corners
+
 	ctx.moveTo(points[0].x, points[0].y);
-	for (let i = 1; i < points.length; i++) {
-		ctx.lineTo(points[i].x, points[i].y);
+
+	if (points.length === 2) {
+		// Simple line, no corners
+		ctx.lineTo(points[1].x, points[1].y);
+	} else {
+		// Use arcTo for rounded corners at each turn
+		for (let i = 1; i < points.length - 1; i++) {
+			ctx.arcTo(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, cornerRadius);
+		}
+		// Draw final segment to last point
+		ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
 	}
+
 	ctx.stroke();
 
 	ctx.shadowBlur = 0;
