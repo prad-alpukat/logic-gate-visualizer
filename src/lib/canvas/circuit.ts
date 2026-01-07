@@ -23,7 +23,7 @@ export function drawCircuit(
 	// Layout calculations
 	const startX = 60;
 	const inputSpacing = 70;
-	const termSpacing = 85;
+	const termSpacing = 100;
 	const padding = 100;
 
 	// Calculate required canvas height
@@ -43,7 +43,7 @@ export function drawCircuit(
 
 	// Bus lines X positions - vertical channels for each variable
 	const busStartX = startX + 140;
-	const busSpacing = 15;
+	const busSpacing = 18;
 
 	// Draw inputs and NOT gates
 	const inputOutputs: Record<string, Point> = {};
@@ -81,7 +81,7 @@ export function drawCircuit(
 	});
 
 	// Draw vertical bus lines from inputs
-	variables.forEach((v, i) => {
+	variables.forEach((v) => {
 		const color = getVarColor(v);
 
 		// Non-negated bus line
@@ -129,7 +129,7 @@ export function drawCircuit(
 	});
 
 	// Calculate term gate positions
-	const termGateX = busStartX + variables.length * busSpacing * 2 + 60;
+	const termGateX = busStartX + variables.length * busSpacing * 2 + 80;
 	const termOutputs: Point[] = [];
 	const termGateData: { gate: GateResult; termY: number }[] = [];
 
@@ -149,7 +149,7 @@ export function drawCircuit(
 		termOutputs.push(gate.output);
 	});
 
-	// Draw connections from bus to term gates
+	// Draw connections from bus to term gates with proper routing
 	terms.forEach((term, termIdx) => {
 		const { gate } = termGateData[termIdx];
 
@@ -159,18 +159,13 @@ export function drawCircuit(
 			const targetPos = gate.inputs[litIdx];
 			const color = getVarColor(lit.variable);
 
-			// Calculate horizontal routing with offset to avoid overlap
-			const routeX = termGateX - 20 - litIdx * 12;
-
 			const wireId = `term${termIdx}-${lit.variable}${lit.negated ? "'" : ''}`;
 
-			// Draw from bus to gate input
+			// Simple direct horizontal line from bus to gate input
 			drawWire(
 				ctx,
 				[
 					{ x: busX, y: targetPos.y },
-					{ x: routeX, y: targetPos.y },
-					{ x: routeX, y: targetPos.y },
 					{ x: targetPos.x, y: targetPos.y }
 				],
 				color,
@@ -198,19 +193,21 @@ export function drawCircuit(
 			finalGate = drawOrGate(ctx, finalGateX, finalGateY, terms.length, hoveredWire);
 		}
 
-		// Connect term outputs to final gate
+		// Connect term outputs to final gate with proper routing
 		termOutputs.forEach((termOut, idx) => {
 			const targetPos = finalGate.inputs[idx];
-			const routeX = finalGateX - 25 - idx * 10;
 			const wireId = `final-term${idx}`;
 			const color = isPOS ? COLORS.and : COLORS.or;
+
+			// Route: horizontal from term output, then vertical, then horizontal to final gate
+			const midX = finalGateX - 30 - (terms.length - 1 - idx) * 12;
 
 			drawWire(
 				ctx,
 				[
 					{ x: termOut.x, y: termOut.y },
-					{ x: routeX, y: termOut.y },
-					{ x: routeX, y: targetPos.y },
+					{ x: midX, y: termOut.y },
+					{ x: midX, y: targetPos.y },
 					{ x: targetPos.x, y: targetPos.y }
 				],
 				color,
