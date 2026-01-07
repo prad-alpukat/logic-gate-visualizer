@@ -80,20 +80,52 @@ export function drawCircuit(
 		busLines[v + "'"] = busStartX + i * busSpacing * 2 + busSpacing;
 	});
 
-	// Draw vertical bus lines from inputs
+	// Calculate Y range needed for each bus line
+	const busYRange: Record<string, { min: number; max: number }> = {};
+
+	// Initialize with input positions
+	variables.forEach((v) => {
+		busYRange[v] = { min: inputOutputs[v].y, max: inputOutputs[v].y };
+		busYRange[v + "'"] = { min: notOutputs[v].y, max: notOutputs[v].y };
+	});
+
+	// Calculate term gate positions first to know Y range
+	const termGateX = busStartX + variables.length * busSpacing * 2 + 80;
+	terms.forEach((term, termIdx) => {
+		const numInputs = term.length;
+		const termY = termStartY + termIdx * termSpacing;
+		const height = Math.max(50, numInputs * 22);
+		const halfHeight = height / 2;
+
+		term.forEach((lit, litIdx) => {
+			const varKey = lit.negated ? lit.variable + "'" : lit.variable;
+			const inputY = termY - halfHeight + (height / (numInputs + 1)) * (litIdx + 1);
+
+			if (busYRange[varKey]) {
+				busYRange[varKey].min = Math.min(busYRange[varKey].min, inputY);
+				busYRange[varKey].max = Math.max(busYRange[varKey].max, inputY);
+			}
+		});
+	});
+
+	// Draw vertical bus lines from inputs (only as long as needed)
 	variables.forEach((v) => {
 		const color = getVarColor(v);
 
 		// Non-negated bus line
 		const busX = busLines[v];
 		const wireIdNormal = `bus-${v}`;
+		const yRange = busYRange[v];
+		const busMinY = Math.min(yRange.min, inputOutputs[v].y) - 10;
+		const busMaxY = Math.max(yRange.max, inputOutputs[v].y) + 10;
+
 		drawWire(
 			ctx,
 			[
 				{ x: inputOutputs[v].x, y: inputOutputs[v].y },
 				{ x: busX, y: inputOutputs[v].y },
-				{ x: busX, y: padding - 20 },
-				{ x: busX, y: canvasHeight - padding + 20 }
+				{ x: busX, y: busMinY },
+				{ x: busX, y: busMaxY }
 			],
 			color,
 			v,
@@ -109,13 +141,17 @@ export function drawCircuit(
 		// Negated bus line
 		const busXNeg = busLines[v + "'"];
 		const wireIdNeg = `bus-${v}'`;
+		const yRangeNeg = busYRange[v + "'"];
+		const busMinYNeg = Math.min(yRangeNeg.min, notOutputs[v].y) - 10;
+		const busMaxYNeg = Math.max(yRangeNeg.max, notOutputs[v].y) + 10;
+
 		drawWire(
 			ctx,
 			[
 				{ x: notOutputs[v].x, y: notOutputs[v].y },
 				{ x: busXNeg, y: notOutputs[v].y },
-				{ x: busXNeg, y: padding - 20 },
-				{ x: busXNeg, y: canvasHeight - padding + 20 }
+				{ x: busXNeg, y: busMinYNeg },
+				{ x: busXNeg, y: busMaxYNeg }
 			],
 			color,
 			v + "'",
@@ -128,8 +164,7 @@ export function drawCircuit(
 		drawDot(ctx, busXNeg, notOutputs[v].y, color, 4, hoveredWire);
 	});
 
-	// Calculate term gate positions
-	const termGateX = busStartX + variables.length * busSpacing * 2 + 80;
+	// Term gate outputs
 	const termOutputs: Point[] = [];
 	const termGateData: { gate: GateResult; termY: number }[] = [];
 
