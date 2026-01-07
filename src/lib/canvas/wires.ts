@@ -29,7 +29,7 @@ export function drawWire(
 		ctx.shadowBlur = 10;
 	}
 
-	const cornerRadius = 8; // Rounded corners
+	const radius = 10; // Corner radius
 
 	ctx.moveTo(points[0].x, points[0].y);
 
@@ -37,12 +37,54 @@ export function drawWire(
 		// Simple line, no corners
 		ctx.lineTo(points[1].x, points[1].y);
 	} else {
-		// Use arcTo for rounded corners at each turn
-		for (let i = 1; i < points.length - 1; i++) {
-			ctx.arcTo(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, cornerRadius);
+		// Draw path with rounded corners using quadratic curves
+		for (let i = 0; i < points.length - 1; i++) {
+			const current = points[i];
+			const next = points[i + 1];
+
+			if (i === 0) {
+				// First segment: draw line towards corner point, stopping before it
+				if (points.length > 2) {
+					const corner = points[1];
+					const dx = corner.x - current.x;
+					const dy = corner.y - current.y;
+					const dist = Math.sqrt(dx * dx + dy * dy);
+					const stopDist = Math.max(0, dist - radius);
+					const ratio = dist > 0 ? stopDist / dist : 0;
+					ctx.lineTo(current.x + dx * ratio, current.y + dy * ratio);
+				} else {
+					ctx.lineTo(next.x, next.y);
+				}
+			} else if (i === points.length - 2) {
+				// Last segment: curve from previous corner to end
+				const prev = points[i - 1];
+				// Draw curve at current corner point
+				const dx = next.x - current.x;
+				const dy = next.y - current.y;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+				const startDist = Math.min(radius, dist / 2);
+				const ratio = dist > 0 ? startDist / dist : 0;
+				const curveEnd = { x: current.x + dx * ratio, y: current.y + dy * ratio };
+				ctx.quadraticCurveTo(current.x, current.y, curveEnd.x, curveEnd.y);
+				ctx.lineTo(next.x, next.y);
+			} else {
+				// Middle corners
+				const nextNext = points[i + 2];
+				// Draw curve at current corner
+				const dx1 = next.x - current.x;
+				const dy1 = next.y - current.y;
+				const dist1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+				const dx2 = nextNext.x - next.x;
+				const dy2 = nextNext.y - next.y;
+				const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+				const r1 = Math.min(radius, dist1 / 2);
+				const r2 = Math.min(radius, dist2 / 2);
+
+				const curveEnd = { x: next.x + (dx2 / dist2) * r2, y: next.y + (dy2 / dist2) * r2 };
+				ctx.quadraticCurveTo(next.x, next.y, curveEnd.x, curveEnd.y);
+			}
 		}
-		// Draw final segment to last point
-		ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
 	}
 
 	ctx.stroke();
