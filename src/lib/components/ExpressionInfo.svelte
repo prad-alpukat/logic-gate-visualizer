@@ -9,78 +9,141 @@
 	let { parsedExpression, expression }: Props = $props();
 </script>
 
-<div class="info-card">
-	<h3>Informasi Ekspresi</h3>
-	<div id="expression-info">
-		{#if parsedExpression}
-			<span class="expression-type" class:type-pos={parsedExpression.isPOS} class:type-sop={!parsedExpression.isPOS}>
-				{parsedExpression.isPOS ? 'POS (Product of Sums)' : 'SOP (Sum of Products)'}
+<div class="info-panel">
+	{#if parsedExpression}
+		<div class="info-header">
+			<span class="type-badge" class:pos={parsedExpression.isPOS}>
+				{parsedExpression.isPOS ? 'POS' : 'SOP'}
 			</span>
-			<div class="expression-info">
-				<strong>Ekspresi:</strong> {expression}<br />
-				<strong>Variabel:</strong> {parsedExpression.variables.join(', ')}<br />
-				<strong>Jumlah Term:</strong> {parsedExpression.terms.length}<br />
-				<strong>Struktur:</strong>
-				{parsedExpression.isPOS ? 'AND dari OR (·)' : 'OR dari AND (+)'}
+			<span class="type-label">
+				{parsedExpression.isPOS ? 'Product of Sums' : 'Sum of Products'}
+			</span>
+		</div>
+
+		<div class="info-grid">
+			<div class="info-item">
+				<span class="label">Expression</span>
+				<code class="value">{expression}</code>
 			</div>
-		{:else}
-			<p class="placeholder">Masukkan ekspresi boolean untuk melihat informasi.</p>
-		{/if}
-	</div>
+			<div class="info-item">
+				<span class="label">Variables</span>
+				<span class="value">{parsedExpression.variables.join(', ')}</span>
+			</div>
+			<div class="info-row">
+				<div class="info-item small">
+					<span class="label">Terms</span>
+					<span class="value">{parsedExpression.terms.length}</span>
+				</div>
+				<div class="info-item small">
+					<span class="label">Structure</span>
+					<span class="value">{parsedExpression.isPOS ? 'AND of OR' : 'OR of AND'}</span>
+				</div>
+			</div>
+		</div>
+	{:else}
+		<div class="empty-state">
+			<span class="empty-icon">i</span>
+			<span>Enter an expression to see details</span>
+		</div>
+	{/if}
 </div>
 
 <style>
-	.info-card {
-		background: #0f3460;
-		border-radius: 15px;
-		padding: 20px;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	.info-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
 	}
 
-	h3 {
-		color: #00d9ff;
-		margin-bottom: 15px;
+	.info-header {
 		display: flex;
 		align-items: center;
+		gap: 8px;
+	}
+
+	.type-badge {
+		padding: 3px 8px;
+		border-radius: 4px;
+		font-size: 10px;
+		font-weight: 600;
+		text-transform: uppercase;
+		background: rgba(13, 153, 255, 0.15);
+		color: var(--accent);
+	}
+
+	.type-badge.pos {
+		background: rgba(242, 72, 34, 0.15);
+		color: var(--error);
+	}
+
+	.type-label {
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+
+	.info-grid {
+		display: flex;
+		flex-direction: column;
 		gap: 10px;
 	}
 
-	h3::before {
-		content: '';
-		width: 4px;
-		height: 20px;
-		background: #00d9ff;
-		border-radius: 2px;
+	.info-item {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
 	}
 
-	.placeholder {
-		color: #888;
+	.info-row {
+		display: flex;
+		gap: 16px;
 	}
 
-	.expression-type {
-		display: inline-block;
-		padding: 5px 15px;
-		border-radius: 20px;
-		font-size: 0.85rem;
-		font-weight: bold;
-		margin-bottom: 10px;
+	.info-item.small {
+		flex: 1;
 	}
 
-	.type-sop {
-		background: #00d9ff;
-		color: #1a1a2e;
+	.label {
+		font-size: 10px;
+		font-weight: 500;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 	}
 
-	.type-pos {
-		background: #e94560;
-		color: #fff;
+	.value {
+		font-size: 12px;
+		color: var(--text-primary);
 	}
 
-	.expression-info {
-		font-family: 'Courier New', monospace;
-		background: #1a1a2e;
-		padding: 15px;
-		border-radius: 8px;
-		margin-top: 10px;
+	code.value {
+		font-family: 'SF Mono', 'Fira Code', monospace;
+		padding: 6px 8px;
+		background: var(--bg-tertiary);
+		border-radius: 4px;
+		word-break: break-all;
+	}
+
+	.empty-state {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 12px;
+		background: var(--bg-tertiary);
+		border-radius: 6px;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+
+	.empty-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 18px;
+		height: 18px;
+		background: var(--bg-hover);
+		border-radius: 50%;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-secondary);
 	}
 </style>

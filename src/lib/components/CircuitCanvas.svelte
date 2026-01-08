@@ -13,18 +13,14 @@
 	let { parsedExpression, expression, hoveredWire, onhoverwire }: Props = $props();
 
 	let canvas: HTMLCanvasElement;
-	let breadboard: HTMLDivElement;
-	let canvasWrapper: HTMLDivElement;
+	let container: HTMLDivElement;
 	let wirePaths: WirePath[] = [];
 	let canvasHeight = $state(500);
 
-	// Zoom state
 	let zoom = $state(1);
-	const MIN_ZOOM = 0.5;
-	const MAX_ZOOM = 2;
-	const ZOOM_STEP = 0.1;
+	const MIN_ZOOM = 0.3;
+	const MAX_ZOOM = 3;
 
-	// Pan/Drag state
 	let isPanning = $state(false);
 	let panX = $state(0);
 	let panY = $state(0);
@@ -37,7 +33,7 @@
 	let tooltipX = $state(0);
 	let tooltipY = $state(0);
 	let tooltipText = $state('');
-	let tooltipColor = $state('#00d9ff');
+	let tooltipColor = $state('#0d99ff');
 
 	$effect(() => {
 		if (canvas && parsedExpression) {
@@ -56,37 +52,13 @@
 		}
 	});
 
-	function zoomIn() {
-		zoom = Math.min(MAX_ZOOM, zoom + ZOOM_STEP);
-	}
-
-	function zoomOut() {
-		zoom = Math.max(MIN_ZOOM, zoom - ZOOM_STEP);
-	}
-
-	function resetZoom() {
-		zoom = 1;
-		panX = 0;
-		panY = 0;
-	}
-
-	function resetPan() {
-		panX = 0;
-		panY = 0;
-	}
-
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
-		if (e.deltaY < 0) {
-			zoomIn();
-		} else {
-			zoomOut();
-		}
+		const delta = e.deltaY > 0 ? 0.9 : 1.1;
+		zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * delta));
 	}
 
-	// Pan handlers
 	function handlePanStart(e: MouseEvent) {
-		// Left click to drag
 		if (e.button === 0) {
 			e.preventDefault();
 			isPanning = true;
@@ -99,10 +71,8 @@
 
 	function handlePanMove(e: MouseEvent) {
 		if (isPanning) {
-			const deltaX = e.clientX - startMouseX;
-			const deltaY = e.clientY - startMouseY;
-			panX = startPanX + deltaX;
-			panY = startPanY + deltaY;
+			panX = startPanX + (e.clientX - startMouseX);
+			panY = startPanY + (e.clientY - startMouseY);
 		}
 	}
 
@@ -119,7 +89,6 @@
 	}
 
 	function handleMouseMove(e: MouseEvent) {
-		// Handle panning
 		if (isPanning) {
 			handlePanMove(e);
 			return;
@@ -136,8 +105,8 @@
 			if (nearestWire) {
 				tooltipVisible = true;
 				const canvasRect = canvas.getBoundingClientRect();
-				tooltipX = e.clientX - canvasRect.left + 15;
-				tooltipY = e.clientY - canvasRect.top - 30;
+				tooltipX = e.clientX - canvasRect.left + 12;
+				tooltipY = e.clientY - canvasRect.top - 28;
 				tooltipText = nearestWire.label || nearestWire.id || '';
 				tooltipColor = nearestWire.color;
 			} else {
@@ -154,257 +123,216 @@
 		isPanning = false;
 	}
 
-	function handleMouseUp() {
-		isPanning = false;
+	function resetView() {
+		zoom = 1;
+		panX = 0;
+		panY = 0;
 	}
 
 	let zoomPercent = $derived(Math.round(zoom * 100));
-	let cursorStyle = $derived(isPanning ? 'grabbing' : 'grab');
-	let hasPanned = $derived(panX !== 0 || panY !== 0);
+	let hasMoved = $derived(zoom !== 1 || panX !== 0 || panY !== 0);
 </script>
 
-<svelte:window onmouseup={handleMouseUp} />
+<svelte:window onmouseup={handlePanEnd} />
 
-<div class="canvas-container">
-	<div class="controls-bar">
-		<div class="zoom-controls">
-			<button class="ctrl-btn" onclick={zoomOut} disabled={zoom <= MIN_ZOOM} title="Zoom Out (-)">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<circle cx="11" cy="11" r="8"/>
-					<line x1="21" y1="21" x2="16.65" y2="16.65"/>
-					<line x1="8" y1="11" x2="14" y2="11"/>
-				</svg>
-			</button>
-			<span class="zoom-level">{zoomPercent}%</span>
-			<button class="ctrl-btn" onclick={zoomIn} disabled={zoom >= MAX_ZOOM} title="Zoom In (+)">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<circle cx="11" cy="11" r="8"/>
-					<line x1="21" y1="21" x2="16.65" y2="16.65"/>
-					<line x1="11" y1="8" x2="11" y2="14"/>
-					<line x1="8" y1="11" x2="14" y2="11"/>
-				</svg>
-			</button>
-			<button class="ctrl-btn reset" onclick={resetZoom} disabled={zoom === 1 && !hasPanned} title="Reset View">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-					<path d="M3 3v5h5"/>
-				</svg>
-			</button>
-		</div>
-
-		<div class="pan-controls">
-			<button class="ctrl-btn pan" onclick={resetPan} disabled={!hasPanned} title="Reset Position">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M5 9l-3 3 3 3"/>
-					<path d="M9 5l3-3 3 3"/>
-					<path d="M15 19l3 3 3-3"/>
-					<path d="M19 9l3 3-3 3"/>
-					<line x1="2" y1="12" x2="22" y2="12"/>
-					<line x1="12" y1="2" x2="12" y2="22"/>
-				</svg>
-			</button>
-			<span class="pan-hint">Drag untuk geser</span>
-		</div>
+<div class="canvas-container" bind:this={container}>
+	<!-- Floating Controls -->
+	<div class="controls">
+		<button class="ctrl-btn" onclick={() => (zoom = Math.min(MAX_ZOOM, zoom * 1.2))} title="Zoom in">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+			</svg>
+		</button>
+		<span class="zoom-label">{zoomPercent}%</span>
+		<button class="ctrl-btn" onclick={() => (zoom = Math.max(MIN_ZOOM, zoom * 0.8))} title="Zoom out">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M8 11h6"/>
+			</svg>
+		</button>
+		<div class="ctrl-divider"></div>
+		<button class="ctrl-btn" onclick={resetView} disabled={!hasMoved} title="Reset view">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+			</svg>
+		</button>
 	</div>
 
+	<!-- Canvas Area -->
 	<div
-		class="breadboard"
+		class="viewport"
 		class:panning={isPanning}
-		bind:this={breadboard}
-		style="min-height: {Math.max(canvasHeight * zoom, 450)}px"
 		onwheel={handleWheel}
 		onmousedown={handlePanStart}
 		oncontextmenu={(e) => e.preventDefault()}
+		role="application"
 	>
 		<div
 			class="canvas-wrapper"
-			bind:this={canvasWrapper}
-			style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: top center;"
+			style="transform: translate({panX}px, {panY}px) scale({zoom})"
 		>
 			<canvas
 				bind:this={canvas}
-				id="circuit-canvas"
 				width="1200"
 				height={canvasHeight}
-				style="cursor: {cursorStyle}"
 				onmousemove={handleMouseMove}
 				onmouseleave={handleMouseLeave}
 			></canvas>
 		</div>
+
 		{#if tooltipVisible && !isPanning}
 			<div
 				class="tooltip"
-				style="left: {tooltipX * zoom + panX}px; top: {tooltipY * zoom + panY}px; border-color: {tooltipColor}; display: block;"
+				style="left: {tooltipX}px; top: {tooltipY}px; --color: {tooltipColor}"
 			>
 				{tooltipText}
 			</div>
 		{/if}
-	</div>
 
-	<div class="controls-hint">
-		Scroll = Zoom | Drag = Pan
+		{#if !parsedExpression}
+			<div class="empty-state">
+				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+				</svg>
+				<p>Enter a boolean expression to visualize</p>
+				<span>Example: AB + A'C or (A + B)(A' + C)</span>
+			</div>
+		{/if}
 	</div>
 </div>
 
 <style>
 	.canvas-container {
-		background: #1e3a1e;
-		border-radius: 15px;
-		padding: 20px;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+		flex: 1;
+		display: flex;
+		flex-direction: column;
 		position: relative;
+		background: #1a1a1a;
 		overflow: hidden;
 	}
 
-	.canvas-container::before {
-		content: '';
+	/* Controls */
+	.controls {
 		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-		background-size: 20px 20px;
-		pointer-events: none;
-	}
-
-	.controls-bar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 15px;
-		position: relative;
-		z-index: 20;
-		flex-wrap: wrap;
-		gap: 10px;
-	}
-
-	.zoom-controls,
-	.pan-controls {
+		top: 12px;
+		left: 12px;
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 4px;
+		padding: 4px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		z-index: 10;
 	}
 
 	.ctrl-btn {
-		background: #1a1a2e;
-		border: 1px solid #00d9ff;
-		color: #00d9ff;
-		width: 32px;
-		height: 32px;
-		border-radius: 6px;
-		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: all 0.2s;
+		width: 28px;
+		height: 28px;
+		background: transparent;
+		border: none;
+		border-radius: 4px;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.15s;
 	}
 
 	.ctrl-btn:hover:not(:disabled) {
-		background: #00d9ff;
-		color: #1a1a2e;
+		background: var(--bg-hover);
+		color: var(--text-primary);
 	}
 
 	.ctrl-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
+		opacity: 0.3;
+		cursor: default;
 	}
 
-	.ctrl-btn.reset {
-		margin-left: 5px;
-		border-color: #ffaa00;
-		color: #ffaa00;
-	}
-
-	.ctrl-btn.reset:hover:not(:disabled) {
-		background: #ffaa00;
-		color: #1a1a2e;
-	}
-
-	.ctrl-btn.pan {
-		border-color: #00ff88;
-		color: #00ff88;
-	}
-
-	.ctrl-btn.pan:hover:not(:disabled) {
-		background: #00ff88;
-		color: #1a1a2e;
-	}
-
-	.zoom-level {
-		font-family: 'Courier New', monospace;
-		color: #00d9ff;
-		font-size: 0.9rem;
-		min-width: 50px;
+	.zoom-label {
+		min-width: 42px;
 		text-align: center;
+		font-size: 11px;
+		font-weight: 500;
+		color: var(--text-secondary);
+		font-variant-numeric: tabular-nums;
 	}
 
-	.pan-hint {
-		font-size: 0.75rem;
-		color: #666;
+	.ctrl-divider {
+		width: 1px;
+		height: 16px;
+		background: var(--border-color);
+		margin: 0 4px;
 	}
 
-	.controls-hint {
-		position: absolute;
-		bottom: 10px;
-		right: 15px;
-		font-size: 0.75rem;
-		color: #666;
-		z-index: 20;
-	}
-
-	.breadboard {
-		background: linear-gradient(180deg, #2d4a2d 0%, #1e3a1e 50%, #2d4a2d 100%);
-		border: 3px solid #0a1f0a;
-		border-radius: 10px;
-		min-height: 500px;
-		position: relative;
+	/* Viewport */
+	.viewport {
+		flex: 1;
 		overflow: hidden;
+		cursor: grab;
+		position: relative;
 	}
 
-	.breadboard.panning {
+	.viewport.panning {
 		cursor: grabbing;
 	}
 
 	.canvas-wrapper {
-		transition: transform 0.1s ease-out;
 		display: flex;
 		justify-content: center;
-		will-change: transform;
+		align-items: center;
+		min-height: 100%;
+		transform-origin: center center;
+		transition: transform 0.1s ease-out;
 	}
 
-	.breadboard.panning .canvas-wrapper {
+	.viewport.panning .canvas-wrapper {
 		transition: none;
 	}
 
 	canvas {
-		position: relative;
-		z-index: 10;
 		display: block;
 	}
 
+	/* Tooltip */
 	.tooltip {
 		position: absolute;
-		background: rgba(0, 0, 0, 0.9);
-		color: #fff;
-		padding: 8px 12px;
+		padding: 6px 10px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--color);
 		border-radius: 6px;
 		font-size: 12px;
-		font-family: 'Courier New', monospace;
+		font-family: 'SF Mono', monospace;
+		color: var(--color);
 		pointer-events: none;
 		z-index: 100;
-		border: 1px solid #00d9ff;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 	}
 
-	@media (max-width: 600px) {
-		.controls-bar {
-			flex-direction: column;
-			align-items: flex-start;
-		}
+	/* Empty State */
+	.empty-state {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		color: var(--text-muted);
+	}
 
-		.pan-hint {
-			display: none;
-		}
+	.empty-state svg {
+		opacity: 0.3;
+	}
+
+	.empty-state p {
+		font-size: 14px;
+		color: var(--text-secondary);
+	}
+
+	.empty-state span {
+		font-size: 12px;
+		font-family: 'SF Mono', monospace;
+		opacity: 0.6;
 	}
 </style>

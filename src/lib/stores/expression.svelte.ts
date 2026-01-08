@@ -12,14 +12,18 @@ function createExpressionStore() {
 		error = null;
 	}
 
-	function visualize() {
-		if (!expression.trim()) {
+	function visualize(expr?: string) {
+		const exprToUse = expr ?? expression;
+		if (!exprToUse.trim()) {
 			error = 'Masukkan ekspresi boolean!';
 			return false;
 		}
 
 		try {
-			parsedExpression = parseExpression(expression);
+			if (expr) {
+				expression = expr;
+			}
+			parsedExpression = parseExpression(exprToUse);
 			hoveredWire = null;
 			error = null;
 			return true;
