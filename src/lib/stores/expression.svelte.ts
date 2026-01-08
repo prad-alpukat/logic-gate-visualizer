@@ -20,12 +20,26 @@ function createExpressionStore() {
 		}
 
 		try {
-			if (expr) {
-				expression = expr;
-			}
-			parsedExpression = parseExpression(exprToUse);
-			hoveredWire = null;
-			error = null;
+			const parsed = parseExpression(exprToUse);
+			// Clear first to force re-render
+			parsedExpression = null;
+
+			// First render
+			setTimeout(() => {
+				expression = exprToUse;
+				parsedExpression = parsed;
+				hoveredWire = null;
+				error = null;
+
+				// Second render to ensure canvas updates
+				setTimeout(() => {
+					parsedExpression = null;
+					setTimeout(() => {
+						parsedExpression = parsed;
+					}, 10);
+				}, 50);
+			}, 10);
+
 			return true;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Error parsing expression';

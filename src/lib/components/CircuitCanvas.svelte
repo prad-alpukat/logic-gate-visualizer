@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick, onMount } from 'svelte';
 	import type { ParsedExpression, WirePath } from '$lib/types';
 	import { drawCircuit } from '$lib/canvas/circuit';
 	import { findNearestWire } from '$lib/canvas/wires';
@@ -12,10 +13,11 @@
 
 	let { parsedExpression, expression, hoveredWire, onhoverwire }: Props = $props();
 
-	let canvas: HTMLCanvasElement;
+	let canvas = $state<HTMLCanvasElement | null>(null);
 	let container: HTMLDivElement;
 	let wirePaths: WirePath[] = [];
 	let canvasHeight = $state(500);
+	let mounted = $state(false);
 
 	let zoom = $state(1);
 	const MIN_ZOOM = 0.3;
@@ -35,19 +37,29 @@
 	let tooltipText = $state('');
 	let tooltipColor = $state('#0d99ff');
 
+	onMount(() => {
+		mounted = true;
+	});
+
 	$effect(() => {
-		if (canvas && parsedExpression) {
-			const ctx = canvas.getContext('2d');
-			if (ctx) {
-				const result = drawCircuit(canvas, ctx, parsedExpression, expression, hoveredWire);
-				wirePaths = result.wirePaths;
-				canvasHeight = result.canvasHeight;
-			}
-		} else if (canvas && !parsedExpression) {
-			const ctx = canvas.getContext('2d');
-			if (ctx) {
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
-			}
+		// Track reactive dependencies
+		const expr = parsedExpression;
+		const wire = hoveredWire;
+		const exprStr = expression;
+		const isMounted = mounted;
+		const canvasEl = canvas;
+
+		if (!isMounted || !canvasEl) return;
+
+		const ctx = canvasEl.getContext('2d');
+		if (!ctx) return;
+
+		if (expr) {
+			const result = drawCircuit(canvasEl, ctx, expr, exprStr, wire);
+			wirePaths = result.wirePaths;
+			canvasHeight = result.canvasHeight;
+		} else {
+			ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 			wirePaths = [];
 		}
 	});
@@ -131,11 +143,29 @@
 
 	let zoomPercent = $derived(Math.round(zoom * 100));
 	let hasMoved = $derived(zoom !== 1 || panX !== 0 || panY !== 0);
+
+	let isFullscreen = $state(false);
+
+	function toggleFullscreen() {
+		if (!document.fullscreenElement) {
+			container?.requestFullscreen();
+		} else {
+			document.exitFullscreen();
+		}
+	}
+
+	$effect(() => {
+		function handleFullscreenChange() {
+			isFullscreen = !!document.fullscreenElement;
+		}
+		document.addEventListener('fullscreenchange', handleFullscreenChange);
+		return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+	});
 </script>
 
 <svelte:window onmouseup={handlePanEnd} />
 
-<div class="canvas-container" bind:this={container}>
+<div class="canvas-container" class:fullscreen={isFullscreen} bind:this={container}>
 	<!-- Floating Controls -->
 	<div class="controls">
 		<button class="ctrl-btn" onclick={() => (zoom = Math.min(MAX_ZOOM, zoom * 1.2))} title="Zoom in">
@@ -154,6 +184,17 @@
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
 			</svg>
+		</button>
+		<button class="ctrl-btn" onclick={toggleFullscreen} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+			{#if isFullscreen}
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+				</svg>
+			{:else}
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+				</svg>
+			{/if}
 		</button>
 	</div>
 
@@ -208,6 +249,11 @@
 		position: relative;
 		background: #1a1a1a;
 		overflow: hidden;
+	}
+
+	.canvas-container.fullscreen {
+		width: 100vw;
+		height: 100vh;
 	}
 
 	/* Controls */

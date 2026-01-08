@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { ParsedExpression, TruthTableRow } from '$lib/types';
 	import { generateTruthTable } from '$lib/utils/truthTable';
 
@@ -67,9 +68,33 @@
 	let mintermNotation = $derived(displayTable.length > 0 ? getMintermNotation(displayTable) : '');
 	let maxtermNotation = $derived(displayTable.length > 0 ? getMaxtermNotation(displayTable) : '');
 	let isEditable = $derived(!parsedExpression);
+	let showAlert = $state(false);
+	let alertMessage = $state('');
+
+	function handleUseFormula(formula: string) {
+		if (!onuseformula || !formula) return;
+		const f = String(formula);
+		onuseformula(f);
+
+		// Show alert
+		alertMessage = 'Rumus berhasil dimasukkan. Klik tombol Run untuk generate rangkaian.';
+		showAlert = true;
+		setTimeout(() => {
+			showAlert = false;
+		}, 3000);
+	}
 </script>
 
 <div class="truth-table-panel">
+	{#if showAlert}
+		<div class="alert">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M20 6L9 17l-5-5"/>
+			</svg>
+			{alertMessage}
+		</div>
+	{/if}
+
 	{#if isEditable}
 		<div class="edit-hint">
 			<span>Click Y to toggle</span>
@@ -119,9 +144,9 @@
 				<span class="badge sop">SOP</span>
 				<span class="notation">{mintermNotation}</span>
 				{#if sopFormula && sopFormula !== '0' && sopFormula !== '1' && onuseformula}
-					<button class="use-btn" onclick={() => onuseformula(sopFormula)} title="Visualize SOP">
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-							<polygon points="5 3 19 12 5 21 5 3"/>
+					<button class="use-btn" onclick={() => handleUseFormula(sopFormula)} title="Use SOP formula">
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M5 12h14M12 5l7 7-7 7"/>
 						</svg>
 					</button>
 				{/if}
@@ -134,9 +159,9 @@
 				<span class="badge pos">POS</span>
 				<span class="notation">{maxtermNotation}</span>
 				{#if posFormula && posFormula !== '0' && posFormula !== '1' && onuseformula}
-					<button class="use-btn" onclick={() => onuseformula(posFormula)} title="Visualize POS">
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-							<polygon points="5 3 19 12 5 21 5 3"/>
+					<button class="use-btn" onclick={() => handleUseFormula(posFormula)} title="Use POS formula">
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M5 12h14M12 5l7 7-7 7"/>
 						</svg>
 					</button>
 				{/if}
@@ -151,6 +176,30 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+	}
+
+	.alert {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 12px;
+		background: rgba(20, 174, 92, 0.15);
+		border: 1px solid var(--success);
+		border-radius: 6px;
+		font-size: 12px;
+		color: var(--success);
+		animation: slideIn 0.2s ease-out;
+	}
+
+	@keyframes slideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
 	.edit-hint {

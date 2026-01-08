@@ -8,6 +8,12 @@
 
 	let rightPanelOpen = $state(true);
 	let rightPanelTab = $state<'table' | 'info'>('table');
+
+	// Derive store values for reactivity
+	let currentExpression = $derived(expressionStore.expression);
+	let currentParsedExpression = $derived(expressionStore.parsedExpression);
+	let currentHoveredWire = $derived(expressionStore.hoveredWire);
+	let currentError = $derived(expressionStore.error);
 </script>
 
 <svelte:head>
@@ -31,7 +37,7 @@
 
 		<div class="topbar-center">
 			<ExpressionInput
-				value={expressionStore.expression}
+				value={currentExpression}
 				onchange={(value) => expressionStore.setExpression(value)}
 				onvisualize={(expr) => expressionStore.visualize(expr)}
 				onreset={() => expressionStore.reset()}
@@ -53,14 +59,14 @@
 		</div>
 	</header>
 
-	{#if expressionStore.error}
+	{#if currentError}
 		<div class="toast error">
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<circle cx="12" cy="12" r="10"/>
 				<line x1="15" y1="9" x2="9" y2="15"/>
 				<line x1="9" y1="9" x2="15" y2="15"/>
 			</svg>
-			{expressionStore.error}
+			{currentError}
 		</div>
 	{/if}
 
@@ -69,9 +75,9 @@
 		<!-- Canvas -->
 		<div class="canvas-area">
 			<CircuitCanvas
-				parsedExpression={expressionStore.parsedExpression}
-				expression={expressionStore.expression}
-				hoveredWire={expressionStore.hoveredWire}
+				parsedExpression={currentParsedExpression}
+				expression={currentExpression}
+				hoveredWire={currentHoveredWire}
 				onhoverwire={(wire) => expressionStore.setHoveredWire(wire)}
 			/>
 		</div>
@@ -99,13 +105,13 @@
 				<div class="panel-content">
 					{#if rightPanelTab === 'table'}
 						<TruthTable
-							parsedExpression={expressionStore.parsedExpression}
-							onuseformula={(formula) => expressionStore.visualize(formula)}
+							parsedExpression={currentParsedExpression}
+							onuseformula={(formula) => expressionStore.setExpression(formula)}
 						/>
 					{:else}
 						<ExpressionInfo
-							parsedExpression={expressionStore.parsedExpression}
-							expression={expressionStore.expression}
+							parsedExpression={currentParsedExpression}
+							expression={currentExpression}
 						/>
 						<div class="panel-divider"></div>
 						<Legend />
@@ -118,14 +124,14 @@
 	<!-- Bottom Bar -->
 	<footer class="bottombar">
 		<div class="bottombar-left">
-			{#if expressionStore.parsedExpression}
+			{#if currentParsedExpression}
 				<span class="status-badge success">
-					{expressionStore.parsedExpression.isPOS ? 'POS' : 'SOP'}
+					{currentParsedExpression.isPOS ? 'POS' : 'SOP'}
 				</span>
 				<span class="status-text">
-					{expressionStore.parsedExpression.variables.length} variables
+					{currentParsedExpression.variables.length} variables
 					<span class="separator">·</span>
-					{expressionStore.parsedExpression.terms.length} terms
+					{currentParsedExpression.terms.length} terms
 				</span>
 			{:else}
 				<span class="status-text muted">Enter a boolean expression to start</span>
@@ -235,6 +241,7 @@
 
 	.canvas-area {
 		flex: 1;
+		display: flex;
 		overflow: hidden;
 	}
 
