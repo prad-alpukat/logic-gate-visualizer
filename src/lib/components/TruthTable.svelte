@@ -10,8 +10,8 @@
 
 	let { parsedExpression, onuseformula }: Props = $props();
 
-	const defaultVariables = ['A', 'B', 'C'];
-	let editableOutputs = $state<boolean[]>(new Array(8).fill(false));
+	const defaultVariables = ['A', 'B', 'C', 'D', 'E'];
+	let editableOutputs = $state<boolean[]>(new Array(32).fill(false));
 
 	let editableTable = $derived.by(() => {
 		const rows: TruthTableRow[] = [];
@@ -99,8 +99,8 @@
 		<div class="edit-hint">
 			<span>Click Y to toggle</span>
 			<div class="edit-actions">
-				<button onclick={() => (editableOutputs = new Array(8).fill(false))}>Clear</button>
-				<button onclick={() => (editableOutputs = new Array(8).fill(true))}>Fill</button>
+				<button onclick={() => (editableOutputs = new Array(32).fill(false))}>Clear</button>
+				<button onclick={() => (editableOutputs = new Array(32).fill(true))}>Fill</button>
 			</div>
 		</div>
 	{/if}
